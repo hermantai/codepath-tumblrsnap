@@ -1,16 +1,5 @@
 package com.codepath.apps.tumblrsnap.fragments;
 
-import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.Locale;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import android.app.Activity;
 import android.content.Intent;
 import android.database.Cursor;
@@ -28,6 +17,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import com.codepath.apps.tumblrsnap.PhotosAdapter;
 import com.codepath.apps.tumblrsnap.R;
@@ -35,6 +25,17 @@ import com.codepath.apps.tumblrsnap.TumblrClient;
 import com.codepath.apps.tumblrsnap.activities.PreviewPhotoActivity;
 import com.codepath.apps.tumblrsnap.models.Photo;
 import com.loopj.android.http.JsonHttpResponseHandler;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.Locale;
 
 public class PhotosFragment extends Fragment {
 	private static final int TAKE_PHOTO_CODE = 1;
@@ -88,11 +89,34 @@ public class PhotosFragment extends Fragment {
 			case R.id.action_take_photo:
 			{
 				// Take the user to the camera app
-			}
+				File outputFile = getOutputMediaFile();
+                photoUri = Uri.fromFile(outputFile);
+                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                intent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
+                if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+                    startActivityForResult(intent, TAKE_PHOTO_CODE);
+                } else {
+                    Toast.makeText(getActivity(), "No camera app is found!", Toast.LENGTH_LONG)
+                            .show();
+                }
+            }
 			break;
 			case R.id.action_use_existing:
 			{
 				// Take the user to the gallery app
+                Intent intent = new Intent(Intent.ACTION_PICK,
+                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+
+                // If you call startActivityForResult() using an intent that no app can handle,
+                // your app will crash.
+                // So as long as the result is not null, it's safe to use the intent.
+                if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+                    // Bring up gallery to select a photo
+                    startActivityForResult(intent, PICK_PHOTO_CODE);
+                } else {
+                    Toast.makeText(getActivity(), "No gallery app is found!", Toast.LENGTH_LONG)
+                            .show();
+                }
 			}
 			break;
 		}
@@ -104,14 +128,16 @@ public class PhotosFragment extends Fragment {
 		if (resultCode == Activity.RESULT_OK) {
 			if (requestCode == TAKE_PHOTO_CODE) {
 				// Extract the photo that was just taken by the camera
-				
+                Toast.makeText(
+                        getActivity(), "Photo stored at: " + photoUri, Toast.LENGTH_LONG).show();
 				// Call the method below to trigger the cropping
-				// cropPhoto(photoUri)
+				cropPhoto(photoUri);
 			} else if (requestCode == PICK_PHOTO_CODE) {
 				// Extract the photo that was just picked from the gallery
+                photoUri = data.getData();
 				
 				// Call the method below to trigger the cropping
-				// cropPhoto(photoUri)
+				cropPhoto(photoUri);
 			} else if (requestCode == CROP_PHOTO_CODE) {
 				photoBitmap = data.getParcelableExtra("data");
 				startPreviewPhotoActivity();
